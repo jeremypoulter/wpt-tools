@@ -6,10 +6,11 @@ def create(filename, contents=b""):
 
 
 def items(s):
-    return [
-        (item.item_type, item.url)
-        for item in s.manifest_items()
-    ]
+    item_type, items = s.manifest_items()
+    if item_type == "support":
+        return []
+    else:
+        return [(item_type, item.url) for item in items]
 
 
 def test_name_is_non_test():
@@ -21,11 +22,14 @@ def test_name_is_non_test():
         "resources/test.html",
         "common/test.html",
         "conformance-checkers/test.html",
+        "conformance-checkers/README.md",
+        "conformance-checkers/html/Makefile",
+        "conformance-checkers/html/test.html",
     ]
 
     for rel_path in non_tests:
         s = create(rel_path)
-        assert s.name_is_non_test
+        assert s.name_is_non_test or s.name_is_conformance_support
 
         assert not s.content_is_testharness
 
