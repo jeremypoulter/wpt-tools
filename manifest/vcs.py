@@ -1,11 +1,14 @@
 import os
 import subprocess
 
+from .sourcefile import SourceFile
+
 
 class Git(object):
-    def __init__(self, repo_root):
+    def __init__(self, repo_root, url_base):
         self.root = os.path.abspath(repo_root)
         self.git = Git.get_func(repo_root)
+        self.url_base = url_base
 
     @staticmethod
     def get_func(repo_path):
@@ -15,21 +18,16 @@ class Git(object):
         return git
 
     @classmethod
-    def for_path(cls, path=None):
-        if path is None:
-            path = os.path.dirname(__file__)
+    def for_path(cls, path, url_base):
         git = Git.get_func(path)
         try:
-            return cls(git("rev-parse", "--show-toplevel").rstrip())
+            return cls(git("rev-parse", "--show-toplevel").rstrip(), url_base)
         except subprocess.CalledProcessError:
             return None
 
-    def local_changes(self, path=None):
+    def _local_changes(self):
         changes = {}
         cmd = ["status", "-z", "--ignore-submodules=all"]
-        if path is not None:
-            path = os.path.relpath(os.path.abspath(path), self.root)
-            cmd.extend(["--", path])
         data = self.git(*cmd)
 
         if data == "":
@@ -49,37 +47,35 @@ class Git(object):
                 rename_data = None
         return changes
 
-    def list_tree(self, path=None):
-        cmd = ["ls-tree", "-r", "-z", "--name-only", "HEAD"]
-        if path is not None:
-            path = os.path.relpath(os.path.abspath(path), self.root)
-            cmd.extend(["--", path])
-        for rel_path in self.git(*cmd).split("\0")[:-1]:
-            if not os.path.isdir(os.path.join(self.root, rel_path)):
-                yield rel_path
-
-    def show_file(self, path):
+    def _show_file(self, path):
         path = os.path.relpath(os.path.abspath(path), self.root)
         return self.git("show", "HEAD:%s" % path)
 
+    def iterfiles(self):
+        cmd = ["ls-tree", "-r", "-z", "--name-only", "HEAD"]
+        local_changes = self._local_changes()
+        for rel_path in self.git(*cmd).split("\0")[:-1]:
+            if not os.path.isdir(os.path.join(self.root, rel_path)):
+                if rel_path in local_changes:
+                    contents = self._show_file(rel_path)
+                else:
+                    contents = None
+                yield SourceFile(self.root,
+                                 rel_path,
+                                 self.url_base,
+                                 contents=contents)
 
-class NoVCS(object):
-    def __init__(self, root):
+
+class FileSystem(object):
+    def __init__(self, root, url_base):
         self.root = root
+        self.url_base = url_base
         from gitignore import gitignore
         self.path_filter = gitignore.PathFilter(self.root)
 
-    def local_changes(self):
-        return {}
-
-    def list_tree(self, path=None):
-        if path is not None:
-            path = os.path.relpath(os.path.abspath(path), self.root)
-        else:
-            path = self.root
-
+    def iterfiles(self):
         is_root = True
-        for dir_path, dir_names, filenames in os.walk(path):
+        for dir_path, dir_names, filenames in os.walk(self.root):
             rel_root = os.path.relpath(dir_path, self.root)
 
             if is_root:
@@ -90,8 +86,15 @@ class NoVCS(object):
             for filename in filenames:
                 rel_path = os.path.join(rel_root, filename)
                 if self.path_filter(rel_path):
-                    yield rel_path
+                    yield SourceFile(self.root,
+                                     rel_path,
+                                     self.url_base)
 
-    def show_file(self, path):
-        with open(path, "rb") as f:
-            return f.read()
+
+class SourceFileList(object):
+    def __init__(self, files):
+        self.files = files
+
+    def itertests(self, url_base, path=None):
+        for f in self.files:
+            yield f

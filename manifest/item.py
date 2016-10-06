@@ -204,4 +204,4 @@ class SupportFile(ManifestItem):
 
     @property
     def id(self):
-        return self.rel_path
+        return self.source_file.rel_path

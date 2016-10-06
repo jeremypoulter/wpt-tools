@@ -6,7 +6,6 @@ from six import iteritems
 
 from .item import ManualTest, WebdriverSpecTest, Stub, RefTestNode, RefTest, TestharnessTest, SupportFile, ConformanceCheckerTest
 from .log import get_logger
-from .sourcefile import SourceFile
 from .utils import from_os_path, to_os_path, rel_path_to_url
 
 
@@ -56,7 +55,6 @@ class Manifest(object):
         return self.reftest_nodes_by_url.get(url)
 
     def update(self, tree):
-        tests_root = tree.root
         new_data = defaultdict(dict)
         new_hashes = {}
 
@@ -64,16 +62,9 @@ class Manifest(object):
 
         changed = False
         reftest_changes = False
-        local_changes = tree.local_changes()
 
-        for rel_path in tree.list_tree(tests_root):
-            content = None
-            if rel_path in local_changes:
-                content = tree.show_file(rel_path)
-
-            source_file = SourceFile(tests_root,
-                                     rel_path,
-                                     self.url_base)
+        for source_file in tree.iterfiles():
+            rel_path = source_file.rel_path
             file_hash = source_file.hash
 
             is_new = rel_path not in self._path_hash
@@ -89,20 +80,22 @@ class Manifest(object):
             else:
                 new_type, manifest_items = source_file.manifest_items()
 
-            if new_type:
+            if new_type in ("reftest", "reftest_node"):
+                reftest_nodes.extend(manifest_items)
+                if is_new or hash_changed:
+                    reftest_changes = True
+            elif new_type:
                 new_data[new_type][rel_path] = manifest_items
+
             new_hashes[rel_path] = (file_hash, new_type)
 
             if is_new or hash_changed:
                 changed = True
 
-            if new_type == "reftest":
-                reftest_nodes.extend(manifest_items)
-                if is_new or hash_changed:
-                    reftest_changes = True
-
         if reftest_changes:
-            self._compute_reftests(reftest_nodes)
+            reftests, reftest_nodes = self._compute_reftests(reftest_nodes)
+            new_data["reftest"] = reftests
+            new_data["reftest_node"] = reftest_nodes
 
         self._data = new_data
         self._path_hash = new_hashes
@@ -116,14 +109,38 @@ class Manifest(object):
             for ref_url, ref_type in item.references:
                 has_inbound.add(ref_url)
 
+        reftests = defaultdict(list)
+        references = defaultdict(list)
+
         for item in reftest_nodes:
-            # This is proabably not great for pypy...
             if item.url in has_inbound:
+                # This is a reference
+                if isinstance(item, RefTest):
+                    item = RefTestNode(item.source_file,
+                                       item.url,
+                                       item.references,
+                                       item.url_base,
+                                       item.timeout,
+                                       item.viewport_size,
+                                       item.dpi,
+                                       item.manifest)
+                references[item.source_file.rel_path].append(item)
                 self._reftest_nodes_by_url[item.url] = item
-                if item.__class__ == RefTest:
-                    item.__class__ = RefTestNode
-            elif item.url not in has_inbound and item.__class__ == RefTestNode:
-                item.__class__ = RefTest
+            else:
+                if isinstance(item, RefTestNode):
+                    item = RefTest(item.source_file,
+                                   item.url,
+                                   item.references,
+                                   item.url_base,
+                                   item.timeout,
+                                   item.viewport_size,
+                                   item.dpi,
+                                   item.manifest)
+                reftests[item.source_file.rel_path].append(item)
+                if item.__class__ == RefTestNode:
+                    item.__class__ = RefTest
+
+        return reftests, references
 
     def to_json(self):
         out_items = {

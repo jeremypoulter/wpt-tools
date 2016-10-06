@@ -11,26 +11,12 @@ from .log import get_logger
 here = os.path.dirname(__file__)
 
 
-def profile(f):
-    import cProfile
-    p = cProfile.Profile()
-    def inner(*args, **kwargs):
-        p.enable()
-        try:
-            return f(*args, **kwargs)
-        finally:
-            p.disable()
-            p.dump_stats("profile.out")
-    return inner
-
-
 def update(tests_root, manifest, working_copy=False):
-    logger = get_logger()
     tree = None
     if not working_copy:
-        tree = vcs.Git.for_path(tests_root)
+        tree = vcs.Git.for_path(tests_root, manifest.url_base)
     if tree is None:
-        tree = vcs.NoVCS(tests_root)
+        tree = vcs.FileSystem(tests_root, manifest.url_base)
 
     return manifest.update(tree)
 
@@ -94,7 +80,7 @@ def find_top_repo():
 
     return rv
 
-@profile
+
 def main(default_tests_root=None):
     opts = create_parser().parse_args()
 

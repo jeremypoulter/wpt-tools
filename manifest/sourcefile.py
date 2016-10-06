@@ -10,7 +10,6 @@ except ImportError:
 
 import html5lib
 
-from . import vcs
 from .item import Stub, ManualTest, WebdriverSpecTest, RefTestNode, RefTest, TestharnessTest, SupportFile, ConformanceCheckerTest
 from .utils import rel_path_to_url, ContextManagerBytesIO, cached_property
 
