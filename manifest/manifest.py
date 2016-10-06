@@ -63,7 +63,7 @@ class Manifest(object):
         changed = False
         reftest_changes = False
 
-        for source_file in tree.iterfiles():
+        for source_file in tree:
             rel_path = source_file.rel_path
             file_hash = source_file.hash
 

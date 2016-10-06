@@ -51,7 +51,7 @@ class Git(object):
         path = os.path.relpath(os.path.abspath(path), self.root)
         return self.git("show", "HEAD:%s" % path)
 
-    def iterfiles(self):
+    def __iter__(self):
         cmd = ["ls-tree", "-r", "-z", "--name-only", "HEAD"]
         local_changes = self._local_changes()
         for rel_path in self.git(*cmd).split("\0")[:-1]:
@@ -73,7 +73,7 @@ class FileSystem(object):
         from gitignore import gitignore
         self.path_filter = gitignore.PathFilter(self.root)
 
-    def iterfiles(self):
+    def __iter__(self):
         is_root = True
         for dir_path, dir_names, filenames in os.walk(self.root):
             rel_root = os.path.relpath(dir_path, self.root)
@@ -91,10 +91,3 @@ class FileSystem(object):
                                      self.url_base)
 
 
-class SourceFileList(object):
-    def __init__(self, files):
-        self.files = files
-
-    def itertests(self, url_base, path=None):
-        for f in self.files:
-            yield f
