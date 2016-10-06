@@ -21,10 +21,14 @@ def test_name_is_non_test():
         "tools/test.html",
         "resources/test.html",
         "common/test.html",
+        "support/test.html",
         "conformance-checkers/test.html",
         "conformance-checkers/README.md",
         "conformance-checkers/html/Makefile",
         "conformance-checkers/html/test.html",
+        "foo/tools/test.html",
+        "foo/resources/test.html",
+        "foo/support/test.html",
     ]
 
     for rel_path in non_tests:
@@ -34,6 +38,20 @@ def test_name_is_non_test():
         assert not s.content_is_testharness
 
         assert items(s) == []
+
+
+def test_not_name_is_non_test():
+    tests = [
+        "foo/common/test.html",
+        "foo/conformance-checkers/test.html",
+        "foo/_certs/test.html",
+    ]
+
+    for rel_path in tests:
+        s = create(rel_path)
+        assert not (s.name_is_non_test or s.name_is_conformance_support)
+        # We aren't actually asserting what type of test these are, just their
+        # name doesn't prohibit them from being tests.
 
 
 def test_name_is_manual():

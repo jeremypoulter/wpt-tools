@@ -30,11 +30,11 @@ class SourceFile(object):
                "xhtml":ElementTree.parse,
                "svg":ElementTree.parse}
 
-    root_dir_non_test = set(["resources",
-                             "common"])
+    root_dir_non_test = set(["common"])
 
-    dir_non_test = set(["tools",
-                        "support"])
+    dir_non_test = set(["resources",
+                        "support",
+                        "tools"])
 
     def __init__(self, tests_root, rel_path, url_base, contents=None):
         """Object representing a file in a source tree.
