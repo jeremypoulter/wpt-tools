@@ -375,7 +375,7 @@ VisualOutput.prototype = {
         a.download = "runner-results.json";
         a.textContent = "Download JSON results";
         if (!a.getAttribute("download")) a.textContent += " (right-click and save as to download)";
-        a.style.display = "inline";
+        a.style.display = "inherit";
     },
 
     test_name_node: function(test) {
@@ -799,7 +799,7 @@ Runner.prototype = {
     open_test_window: function() {
         if (document.getElementById('iframe').checked) {
             var placeHolder = document.getElementById('iFramePlaceholder');
-            placeHolder.style.display = 'inline';
+            placeHolder.style.display = 'inherit';
 
             var iFrameElement = document.createElement("iframe");
             iFrameElement.id = 'outputWindow';
@@ -839,7 +839,7 @@ Runner.prototype = {
                 }.bind(this));
             }.bind(this));
 
-            document.querySelector(".uploadResults").style.display = "inline";
+            document.querySelector(".uploadResults").style.display = "inherit";
         }
     },
 
