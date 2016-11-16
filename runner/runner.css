@@ -206,3 +206,11 @@ td.ERROR {
     background: black;
     padding: 8px;
 }
+
+.pathText
+{
+   position: absolute;
+   top: 0;
+   left: 15px;
+   width: 90%;
+}

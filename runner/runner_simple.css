@@ -1,0 +1,30 @@
+body
+{
+    margin: 3%;
+}
+
+
+.nav-focus
+{
+    border-color:red;
+    border-width:2px;
+    border-style: dashed;
+}
+
+
+td.PASS {
+    color:  #48cfad;
+}
+
+td.FAIL {
+    color:  #ed5565;
+}
+
+td.TIMEOUT {
+    color:  #f6bb42;
+}
+
+td.ERROR {
+    color: #da4453;
+    font-weight: bold;
+}

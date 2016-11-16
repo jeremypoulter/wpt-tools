@@ -1,9 +1,55 @@
+/// <reference path="testlist.js" />
+/// <reference path="upload.js" />
+
 /*jshint nonew: false */
 (function() {
 "use strict";
 var runner;
 var testharness_properties = {output:false,
                               timeout_multiplier:1};
+
+function Config() {
+    this.path_list = ['/config.default.json', '/config.json'];
+    this.count = 0;
+}
+
+Config.prototype =
+{
+    load: function (loaded_callback)
+    {
+        var xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = function ()
+        {
+            if (xhr.readyState !== 4) {
+                return;
+            }
+            if (xhr.status === 200 ) 
+            {
+                var data = JSON.parse(xhr.responseText);
+                for (var index in data) {
+                    this[index] = data[index];
+                }
+            }
+
+            if (this.count < this.path_list.length) {
+                this.load(loaded_callback);
+            } else {
+                loaded_callback();
+            }
+        }.bind(this);
+        xhr.open("GET", this.path_list[this.count++]);
+        xhr.send(null);
+    },
+
+    by_type:function(type) {
+        if (this.data.items.hasOwnProperty(type)) {
+            return this.data.items[type];
+        } else {
+            return [];
+        }
+    }
+};
+
 
 function Manifest(path) {
     this.data = null;
@@ -502,6 +548,9 @@ TestControl.prototype = {
             elem.disabled = false;
         });
         this.start_button.onclick = function() {
+            // Hide the instructions
+            document.getElementById('instructions').style.display = "none";
+
             var path = this.get_path();
             var test_types = this.get_test_types();
             var settings = this.get_testharness_settings();
@@ -624,9 +673,68 @@ Results.prototype = {
     }
 };
 
-function Runner(manifest_path) {
+function ServerResults(runner)
+{
+    this.runner = runner;
+    this.endpoint = false;
+
+    this.runner.result_callbacks.push(this.on_result.bind(this));
+}
+
+ServerResults.prototype =
+{
+    open: function(endpoint) {
+        this.endpoint = endpoint;
+    },
+    close: function (){
+        this.endpoint = false;
+    },
+    on_result: function (test, status, message, subtests)
+    {
+        if (false !== this.endpoint)
+        {
+            var dataObject = {
+                "test": test,
+                "subtests": subtests,
+                "status": status,
+                "message": message
+            };
+            var data = JSON.stringify(dataObject);
+            ajax(this.endpoint, "POST", data);
+        }
+    }
+};
+
+
+function TopLevelTestList(inputBox, selectList)
+{
+  this.inputBox = inputBox;
+  this.selectList = selectList;
+  selectList.addEventListener('change', this.on_change.bind(this));
+  var opt = new Option("Custom", "");
+  selectList.add(opt);
+  var opt = new Option("All", "/" + tests.join(",/"));
+  selectList.add(opt);
+  for (var i in tests)
+  {
+    var test = tests[i];
+    
+    opt = new Option(test, "/"+test);
+    selectList.add(opt);
+  }
+}
+
+TopLevelTestList.prototype = {
+    on_change: function() {
+        this.inputBox.value = this.selectList.value;
+    }
+};
+
+function Runner(manifest_path, options)
+{
     this.server = location.protocol + "//" + location.host;
     this.manifest = new Manifest(manifest_path);
+    this.config = new Config();
     this.path = null;
     this.test_types = null;
     this.manifest_iterator = null;
@@ -646,12 +754,35 @@ function Runner(manifest_path) {
     this.test_pause_callbacks = [];
     this.result_callbacks = [];
     this.done_callbacks = [];
+    this.error_callbacks = [];
 
     this.results = new Results(this);
+    this.serverResults = new ServerResults(this);
+
+    this.endpoints = [];
+    this.resultsSessionEndpoint = false;
 
     this.start_after_manifest_load = false;
     this.manifest_loading = true;
     this.manifest.load(this.manifest_loaded.bind(this));
+    this.config.load(this.config_loaded.bind(this));
+
+    var new_session = document.getElementById("new_session");
+    new_session.addEventListener('click', function () {
+        this.create_new_session();
+    }.bind(this));
+
+    // TODO: Is this still needed? JP
+    var upload_results = document.getElementById("upload_results");
+    upload_results.addEventListener('change', function () {
+        if (upload_results.checked) {
+            new_session.parentNode.style.display = 'inherit';
+            this.create_new_session();
+        } else {
+            new_session.parentNode.style.display = 'none';
+            this.resultsSessionEndpoint = false;
+        }
+    }.bind(this));
 }
 
 Runner.prototype = {
@@ -662,13 +793,46 @@ Runner.prototype = {
     },
 
     open_test_window: function() {
-        this.test_window = window.open("about:blank", 800, 600);
+        if (document.getElementById('iframe').checked) {
+            var placeHolder = document.getElementById('iFramePlaceholder');
+
+            var iFrameElement = document.createElement("iframe");
+            iFrameElement.id = 'outputWindow';
+
+            if(placeHolder.classList.contains('embed-responsive')) {
+                iFrameElement.classList.add('embed-responsive-item');
+            } else {
+                iFrameElement.style.width = placeHolder.clientWidth + "px";
+                iFrameElement.style.height = (window.innerHeight * 0.6) + "px";
+            }
+
+            placeHolder.appendChild(iFrameElement);
+            this.test_window = iFrameElement.contentWindow;
+        } else {
+            this.test_window = window.open("about:blank", 800, 600);
+        }
     },
 
     manifest_loaded: function() {
         this.manifest_loading = false;
         if (this.start_after_manifest_load) {
             this.do_start();
+        }
+    },
+
+    config_loaded: function () {
+        if (this.config.test_tool_endpoint)
+        {
+            ajax(this.config.test_tool_endpoint, "GET", "", function (data) {
+                data.links.forEach(function (item)
+                {
+                    var parser = document.createElement('a');
+                    parser.href = this.config.test_tool_endpoint;
+                    parser.pathname = item.href;
+
+                    this.endpoints[item.rel] = parser.href;
+                }.bind(this));
+            }.bind(this));
         }
     },
 
@@ -682,6 +846,12 @@ Runner.prototype = {
         window.testharness_properties = testharness_settings;
         this.manifest_iterator = new ManifestIterator(this.manifest, this.path, this.test_types, this.use_regex);
         this.num_tests = null;
+
+        if(this.resultsSessionEndpoint) {
+            this.serverResults.open(this.resultsSessionEndpoint);
+        } else {
+            this.serverResults.close();
+        }
 
         if (this.manifest.data === null) {
             this.wait_for_manifest();
@@ -709,8 +879,15 @@ Runner.prototype = {
             if (this.test_types.length < 3) {
                 tests = this.test_types.join(" tests or ") + " tests";
             }
-            var message = "No " + tests + " found in this path."
+            var message = "No " + tests + " found in '"+this.path+"'.";
+
             document.querySelector(".path").setCustomValidity(message);
+
+            this.error_callbacks.forEach(function (callback)
+            {
+                callback(message);
+            });
+
             this.done();
         }
     },
@@ -743,7 +920,12 @@ Runner.prototype = {
     done: function() {
         this.done_flag = true;
         if (this.test_window) {
-            this.test_window.close();
+            if(document.getElementById('iframe').checked) {
+                var outputWindow = document.getElementById('outputWindow');
+                outputWindow.parentNode.removeChild(outputWindow);
+            } else {
+                this.test_window.close();
+            }
         }
         this.done_callbacks.forEach(function(callback) {
             callback();
@@ -790,6 +972,25 @@ Runner.prototype = {
             this.num_tests = this.manifest_iterator.count();
         }
         return this.num_tests;
+    },
+
+    create_new_session: function ()
+    {
+        ajax(this.endpoints.results, "POST", "",
+        function (e) // onComplete
+        {
+            if (e.session)
+            {
+                document.getElementById("sessionId").innerHTML = e.session.id;
+                var parser = document.createElement('a');
+                parser.href = this.endpoints.results;
+                parser.pathname = e.session.href;
+                this.resultsSessionEndpoint = parser.href;
+            }
+        }.bind(this),
+        function () // onError
+        {
+        });
     }
 
 };
@@ -816,13 +1017,34 @@ function setup() {
     if (options.path) {
         document.getElementById('path').value = options.path;
     }
+    if (options.testharness) {
+        document.getElementById('th').checked = true;
+    }
+    if (options.reftest) {
+        document.getElementById('ref').checked = true;
+    }
+    if (options.manual) {
+        document.getElementById('man').checked = true;
+    }
+    if (options.iframe) {
+        document.getElementById('iframe').checked = true;
+    }
 
     runner = new Runner("/MANIFEST.json", options);
     var test_control = new TestControl(document.getElementById("testControl"), runner);
     new ManualUI(document.getElementById("manualUI"), runner);
     new VisualOutput(document.getElementById("output"), runner);
+    new TopLevelTestList(document.getElementById("path"), document.getElementById("pathSelector"));
+    if (window.RunnerSimple) {
+        new RunnerSimple(runner);
+    }
 
-    if (options.autorun === "1") {
+    if (options.autorun === "1")
+    {
+        // Hide the instructions and controls
+        document.getElementById('instructions').style.display = "none";
+        document.getElementById('testSelection').style.display = "none";
+
         runner.start(test_control.get_path(),
                      test_control.get_test_types(),
                      test_control.get_testharness_settings(),
