@@ -46,17 +46,14 @@
               <input type=checkbox checked value="manual" id='man' class='test-type'>
               Manual tests
             </label>
-            <label>
-              <input type=checkbox checked value="iframe" id='iframe'>
-              Manual tests
-            </label>
           </div>
         </div>
 
         <div class="form-group">
           <label for="path" class="col-sm-3 control-label">Run tests under path</label>
           <div class="col-sm-9">
-            <input value="/" id='path' class='path form-control' disabled>
+            <select id='pathSelector' class='form-control'></select>
+            <input value="/" id='path' class='path pathText form-control' disabled>
             <label>
               <input type=checkbox id='use_regex'>
               Use regular expression
@@ -82,6 +79,23 @@
               <input type=checkbox id='dumpit'>
               Dump JSON
             </label>
+            <label>
+              <input type=checkbox checked value="iframe" id='iframe'>
+              iFrame
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group uploadResults" style="display: none">
+          <label class="col-sm-3 control-label">Results</label>
+          <div class="col-sm-9">
+            <label>
+              <input type=checkbox id='upload_results'>
+              Upload results
+            </label>
+            <div style="display: none">
+              <button id="new_session" class="btn btn-info"> New session </button> session <span id="sessionId"></span>
+            </div>
           </div>
         </div>
 

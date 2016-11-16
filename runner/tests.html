@@ -22,56 +22,84 @@
             <div class="alert alert-danger" id="errorMessageText"></div>
         </div>
 
-        <div id="instructions"></div>
+        <div class="instructions"></div>
 
         <div id="testControl">
             <form id='options' onsubmit='return false;'>
                 <div id='testSelection' class="list-group test-list">
                     <div class="list-group-item row keynav" keynav-selector="#th">
-                        <input type="checkbox" value="testharness" id='th' class='test-type col-sm-1' checked="checked">
-                        <label for="th" class="control-label col-sm-11">JavaScript tests</label>
+                        <label>
+                            <input type=checkbox checked value="testharness" id='th' class='test-type'>&nbsp;
+                            JavaScript tests
+                        </label>
                     </div>
+
                     <div class="list-group-item row keynav" keynav-selector="#ref">
-                        <input type="checkbox" value="reftest" id='ref' class='test-type col-sm-1'>
-                        <label for="ref" class="control-label col-sm-11">Reference tests</label>
+                        <label>
+                            <input type=checkbox value="reftest" id='ref' class='test-type'>&nbsp;
+                            Reftests
+                        </label>
                     </div>
+
                     <div class="list-group-item row keynav" keynav-selector="#man">
-                        <input type="checkbox" value="manual" id='man' class='test-type col-sm-1'>
-                        <label for="man" class="control-label col-sm-11">Manual tests</label>
+                        <label>
+                            <input type=checkbox value="manual" id='man' class='test-type'>&nbsp;
+                            Manual tests
+                        </label>
                     </div>
+
                     <div class="list-group-item row keynav" keynav-selector="#iframe">
-                        <input type="checkbox" value="iframe" id='iframe' class='col-sm-1' checked="checked">
-                        <label for="iframe" class="control-label col-sm-11">Use iFrame</label>
+                        <label>
+                            <input type=checkbox checked value="iframe" id='iframe'>&nbsp;
+                            iFrame
+                        </label>
                     </div>
+
                     <div class="list-group-item row keynav" keynav-selector="#timeout_multiplier" style="display:none">
                         <label for="timeout_multiplier" class="control-label col-sm-3">Timeout Multiplier</label>
                         <input type="number" value="1" id='timeout_multiplier' class='timeout_multiplier form-control col-sm-9'>
                     </div>
+
                     <div class="list-group-item row keynav" keynav-selector="#render" style="display:none">
-                        <input type="checkbox" id='render' value='render' class='render col-sm-1'>
-                        <label for="render" class="control-label col-sm-11">Show output (debug)</label>
+                        <label>
+                            <input type=checkbox id='render' value='render' class='render'>&nbsp;
+                            Show output
+                        </label>
                     </div>
+
                     <div class="list-group-item row keynav" keynav-selector="#dumpit" style="display:none">
-                        <input type="checkbox" id='dumpit' class='col-sm-1'>
-                        <label for="dumpit" class="control-label col-sm-11">Dump JSON (debug)</label>
+                        <label>
+                            <input type=checkbox id='dumpit'>&nbsp;
+                            Dump JSON
+                        </label>
                     </div>
 
                     <div class="list-group-item has-feedbak row" style="display:none">
                         <label for="pathSelector" class="col-sm-3 control-label">Run tests under path</label>
                         <div class="col-sm-9">
-                            <select id='pathSelector' class='form-control'>
-                                <option value="/">All</option>
-                            </select>
+                            <select id='pathSelector' class='form-control'></select>
                             <input value="/" id='path' class='path pathText form-control' disabled />
+                            <label>
+                                <input type=checkbox id='use_regex'>
+                                Use regular expression
+                            </label>
                         </div>
                     </div>
 
-                    <div class="list-group-item row keynav" keynav-selector="#upload_results">
-                        <input type="checkbox" id='upload_results' class='col-sm-1'>
-                        <label for="upload_results" class="control-label col-sm-11">Upload test results</label>
+                    <div class="list-group-item row" style="display:none">
+                        <label class="col-sm-3 control-label">Count of matching tests</label>
+                        <div class="col-sm-9" id="testcount"></div>
                     </div>
-                    <div class="list-group-item row keynav" keynav-selector="#new_session" style="display: none">
-                        <button id="new_session" class="btn btn-default"> New session </button> session <span id="sessionId" class=""></span>
+
+                    <div class="uploadResults" style="display: none">
+                        <div class="list-group-item row keynav" keynav-selector="#upload_results" >
+                            <input type="checkbox" id='upload_results' class='col-sm-1'>
+                            <label for="upload_results" class="control-label col-sm-11">Upload test results</label>
+                        </div>
+
+                        <div class="list-group-item row keynav" keynav-selector="#new_session" style="display: none">
+                            <button id="new_session" class="btn btn-default"> New session </button> session <span id="sessionId" class=""></span>
+                        </div>
                     </div>
                 </div>
 
@@ -128,7 +156,9 @@
 
         <div id="output" class="test-runner">
             <div class="summary clearfix">
-                <h4>Progress</h4>
+                <h4>Progress
+                    <span id="manifest">updating and loading test manifest; this may take several minutes</span>
+                </h4>
                 <div class="progress">
                     <div class="progress-bar" role="progressbar"
                          aria-valuenow="0" aria-valuemin="0" aria-valuemax="0" style="width: 0">
@@ -137,58 +167,72 @@
                 </div>
                 <div id='test_url'></div>
                 <div class="row">
-                    <div class="col-md-3">
+                    <div class="col-md-2 col-md-offset-1">
                         <table class='table'>
                             <thead>
                                 <tr>
-                                    <th>Passed
+                                    <th>Passed</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td class='PASS'>0
+                                    <td class='PASS'>0</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <table class='table'>
                             <thead>
                                 <tr>
-                                    <th>Failed
+                                    <th>Failed</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td class='FAIL'>0
+                                    <td class='FAIL'>0</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <table class='table'>
                             <thead>
                                 <tr>
-                                    <th>Timeouts
+                                    <th>Timeouts</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td class='TIMEOUT'>0
+                                    <td class='TIMEOUT'>0</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <table class='table'>
                             <thead>
                                 <tr>
-                                    <th>Errors
+                                    <th>Errors</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td class='ERROR'>0
+                                    <td class='ERROR'>0</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-md-2">
+                        <table class='table'>
+                            <thead>
+                                <tr>
+                                    <th>Not Run</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class='NOTRUN'>0</td>
                                 </tr>
                             </tbody>
                         </table>

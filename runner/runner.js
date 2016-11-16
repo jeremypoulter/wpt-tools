@@ -549,7 +549,7 @@ TestControl.prototype = {
         });
         this.start_button.onclick = function() {
             // Hide the instructions
-            document.getElementById('instructions').style.display = "none";
+            document.querySelector('.instructions').style.display = "none";
 
             var path = this.get_path();
             var test_types = this.get_test_types();
@@ -711,23 +711,26 @@ function TopLevelTestList(inputBox, selectList)
   this.inputBox = inputBox;
   this.selectList = selectList;
   selectList.addEventListener('change', this.on_change.bind(this));
-  var opt = new Option("Custom", "");
-  selectList.add(opt);
-  var opt = new Option("All", "/" + tests.join(",/"));
-  selectList.add(opt);
+  selectList.add(new Option("Custom", ""));
+  selectList.add(new Option("All", "/" + tests.join(",/")));
   for (var i in tests)
   {
     var test = tests[i];
-    
-    opt = new Option(test, "/"+test);
-    selectList.add(opt);
+    selectList.add(new Option(test, "/"+test));
   }
 }
 
 TopLevelTestList.prototype = {
     on_change: function() {
         this.inputBox.value = this.selectList.value;
-    }
+        // Triggger the change event so the count gets updated, http://stackoverflow.com/questions/2856513/how-can-i-trigger-an-onchange-event-manually
+        if ("createEvent" in document) {
+            var evt = document.createEvent("HTMLEvents");
+            evt.initEvent("change", false, true);
+            this.inputBox.dispatchEvent(evt);
+        } else
+            this.inputBox.fireEvent("onchange");
+        }
 };
 
 function Runner(manifest_path, options)
@@ -769,10 +772,11 @@ function Runner(manifest_path, options)
 
     var new_session = document.getElementById("new_session");
     new_session.addEventListener('click', function () {
-        this.create_new_session();
+        if(this.config.test_tool_endpoint) {
+            this.create_new_session();
+        }
     }.bind(this));
 
-    // TODO: Is this still needed? JP
     var upload_results = document.getElementById("upload_results");
     upload_results.addEventListener('change', function () {
         if (upload_results.checked) {
@@ -795,6 +799,7 @@ Runner.prototype = {
     open_test_window: function() {
         if (document.getElementById('iframe').checked) {
             var placeHolder = document.getElementById('iFramePlaceholder');
+            placeHolder.style.display = 'inline';
 
             var iFrameElement = document.createElement("iframe");
             iFrameElement.id = 'outputWindow';
@@ -833,6 +838,8 @@ Runner.prototype = {
                     this.endpoints[item.rel] = parser.href;
                 }.bind(this));
             }.bind(this));
+
+            document.querySelector(".uploadResults").style.display = "inline";
         }
     },
 
@@ -923,6 +930,8 @@ Runner.prototype = {
             if(document.getElementById('iframe').checked) {
                 var outputWindow = document.getElementById('outputWindow');
                 outputWindow.parentNode.removeChild(outputWindow);
+                var placeHolder = document.getElementById('iFramePlaceholder');
+                placeHolder.style.display = 'none';
             } else {
                 this.test_window.close();
             }
