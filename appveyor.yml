@@ -11,6 +11,9 @@ environment:
 # we have a __init__.py at the top level).
 clone_folder: 'C:\projects\wpttools'
 
+init:
+  - 'git config --global core.autocrlf true'
+
 install:
   - 'SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%'
   - 'git submodule update --init --recursive'
