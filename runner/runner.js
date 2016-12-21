@@ -50,14 +50,14 @@ Manifest.prototype = {
     by_type:function(type) {
         var ret = [] ;
         if (this.data.items.hasOwnProperty(type)) {
-            for(var propertyName in this.data.items[type]) {
+            for (var propertyName in this.data.items[type]) {
                 var arr = this.data.items[type][propertyName][0];
                 var item = arr[arr.length - 1];
                 item.path = propertyName;
-                if('string' === typeof arr[0]) {
+                if ('string' === typeof arr[0]) {
                     item.url = arr[0];
                 }
-                if(Array.isArray(arr[1])) {
+                if (Array.isArray(arr[1])) {
                     item.references = arr[1];
                 }
                 ret.push(item);
